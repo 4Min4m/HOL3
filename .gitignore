@@ -20,6 +20,11 @@ kubeconfig
 *.kubeconfig
 .kube/
 
+# Minikube
+minikube*
+*.minikube
+minikube-linux-amd64
+
 # Environment variables
 .env
 *.env.local
