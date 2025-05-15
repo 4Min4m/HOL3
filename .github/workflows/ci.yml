@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - run: npm install
+      working-directory: ./node-app
+    - name: Build and Push Docker image
+      env:
+        CR_PAT: ${{ secrets.CR_PAT }}
+      run: |
+        docker build -t ghcr.io/4min4m/node-app:latest ./node-app
+        echo $CR_PAT | docker login ghcr.io -u 4min4m --password-stdin
+        docker push ghcr.io/4min4m/node-app:latest
+    - name: Deploy to Kubernetes
+      env:
+        CR_PAT: ${{ secrets.CR_PAT }}
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      run: |
+        mkdir -p ~/.kube
+        echo "$KUBE_CONFIG" > ~/.kube/config
+        kubectl create secret docker-registry ghcr-secret \
+          --docker-server=ghcr.io \
+          --docker-username=4min4m \
+          --docker-password=$CR_PAT \
+          --docker-email=m.a.amini2011@gmail.com \
+          --dry-run=client -o yaml | kubectl apply -f -
+        cd terraform
+        terraform init
+        terraform apply -auto-approve
