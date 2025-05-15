@@ -19,13 +19,17 @@ jobs:
         node-version: '20'
     - run: npm install
       working-directory: ./node-app
-    - name: Install Minikube
+    - name: Install Ansible
       run: |
-        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-        sudo install minikube-linux-amd64 /usr/local/bin/minikube
-    - name: Start Minikube
+        sudo apt update
+        sudo apt install ansible -y
+        ansible-galaxy collection install -r ansible/requirements.yml
+    - name: Run Ansible Playbook
+      env:
+        CR_PAT: ${{ secrets.CR_PAT }}
+        EMAIL: m.a.amini2011@gmail.com
       run: |
-        minikube start --driver=docker
+        ansible-playbook ansible/playbook.yml -e "CR_PAT=$CR_PAT EMAIL=$EMAIL"
     - name: Build and Push Docker image
       env:
         CR_PAT: ${{ secrets.CR_PAT }}
@@ -34,15 +38,7 @@ jobs:
         docker buildx build --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache -t ghcr.io/4min4m/node-app:latest ./node-app --push
         echo $CR_PAT | docker login ghcr.io -u 4min4m --password-stdin
     - name: Deploy to Kubernetes
-      env:
-        CR_PAT: ${{ secrets.CR_PAT }}
       run: |
-        kubectl create secret docker-registry ghcr-secret \
-          --docker-server=ghcr.io \
-          --docker-username=4min4m \
-          --docker-password=$CR_PAT \
-          --docker-email=m.a.amini2011@gmail.com \
-          --dry-run=client -o yaml | kubectl apply -f -
         cd terraform
         terraform init
         terraform apply -auto-approve

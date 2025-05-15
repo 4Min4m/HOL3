@@ -1,0 +1,43 @@
+- name: Setup Minikube and Kubernetes
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Install prerequisites
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - curl
+        - conntrack
+
+    - name: Download Minikube binary
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /usr/local/bin/minikube
+        mode: '0755'
+
+    - name: Install kubectl
+      shell: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        mv kubectl /usr/local/bin/
+      args:
+        creates: /usr/local/bin/kubectl
+
+    - name: Start Minikube
+      command: minikube start --driver=docker
+      args:
+        creates: /home/codespace/.minikube
+
+    - name: Create ImagePullSecret for ghcr.io
+      command: |
+        kubectl create secret docker-registry ghcr-secret \
+          --docker-server=ghcr.io \
+          --docker-username=4min4m \
+          --docker-password={{ lookup('env', 'CR_PAT') }} \
+          --docker-email={{ lookup('env', 'EMAIL') }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+      environment:
+        CR_PAT: "{{ lookup('env', 'CR_PAT') }}"
+        EMAIL: "{{ lookup('env', 'EMAIL') }}"

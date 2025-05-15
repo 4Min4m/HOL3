@@ -1,16 +1,18 @@
-# Node.js Kubernetes Lab
+# Node.js Kubernetes Lab with Terraform and Ansible
 
-This project is a hands-on lab to demonstrate deploying a Node.js application on Kubernetes using Terraform for infrastructure management and GitHub Actions for CI/CD.
+This project is a hands-on lab to deploy a Node.js application on Kubernetes using Terraform for infrastructure management, Ansible for environment setup, and GitHub Actions for CI/CD.
 
 ## Project Structure
 - `node-app/`: Contains the Node.js application source code.
 - `terraform/`: Terraform configurations for Kubernetes Deployment and Service.
+- `ansible/`: Ansible playbook for setting up Minikube and Kubernetes.
 - `.github/workflows/`: GitHub Actions workflow for CI/CD.
 
 ## Prerequisites
 - [Docker](https://www.docker.com/)
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
 - [Terraform](https://www.terraform.io/)
+- [Ansible](https://www.ansible.com/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - A GitHub account with a Personal Access Token (PAT) for `ghcr.io`.
 
@@ -20,17 +22,10 @@ This project is a hands-on lab to demonstrate deploying a Node.js application on
    git clone https://github.com/4Min4m/<your-repo>.git
    cd <your-repo>
 ```
-**Start Minikube**:
+**Run Ansible Playbook**:
 ```bash
-minikube start --driver=docker
+ansible-playbook ansible/playbook.yml -e "CR_PAT=<your-pat> EMAIL=<your-email>"
 ```
-**Create ImagePullSecret**:
-```bash
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=ghcr.io \
-  --docker-username=4min4m \
-  --docker-password=<your-pat> \
-  --docker-email=<your-email>
 ```
 **Apply Terraform**
 ```bash
@@ -42,9 +37,9 @@ terraform apply
 
 Run:
 ```bash
-minikube service node-app-service --url
+kubectl port-forward svc/node-app-service 8080:80
 ```
-Open the provided URL in your browser to see "Hello, World!".
+Open the URL in your browser (e.g., http://<codespace-url>:8080) to see "Hello, World!".
 
 ## CI/CD
 
@@ -55,7 +50,7 @@ Deploying to Kubernetes using Terraform.
 
 Ensure the CR_PAT secret is set in GitHub Actions.
 
-Updating the Application
+**Updating the Application**
 Modify node-app/index.js (e.g., change the greeting).
 
 Commit and push changes:
