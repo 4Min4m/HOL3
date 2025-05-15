@@ -36,6 +36,9 @@ resource "kubernetes_deployment" "app" {
             container_port = 3000
           }
         }
+        image_pull_secrets {
+          name = "ghcr-secret"
+        }
       }
     }
   }
@@ -53,6 +56,6 @@ resource "kubernetes_service" "app" {
       port        = 80
       target_port = 3000
     }
-    type = "NodePort"
+    type = "LoadBalancer"
   }
 }

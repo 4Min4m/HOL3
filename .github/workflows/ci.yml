@@ -7,25 +7,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
     - uses: actions/setup-node@v4
       with:
         node-version: '20'
     - run: npm install
       working-directory: ./node-app
+    - name: Install Minikube
+      run: |
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+    - name: Start Minikube
+      run: |
+        minikube start --driver=docker
     - name: Build and Push Docker image
       env:
         CR_PAT: ${{ secrets.CR_PAT }}
       run: |
-        docker build -t ghcr.io/4min4m/node-app:latest ./node-app
+        docker buildx create --use
+        docker buildx build --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache -t ghcr.io/4min4m/node-app:latest ./node-app --push
         echo $CR_PAT | docker login ghcr.io -u 4min4m --password-stdin
-        docker push ghcr.io/4min4m/node-app:latest
     - name: Deploy to Kubernetes
       env:
         CR_PAT: ${{ secrets.CR_PAT }}
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       run: |
-        mkdir -p ~/.kube
-        echo "$KUBE_CONFIG" > ~/.kube/config
         kubectl create secret docker-registry ghcr-secret \
           --docker-server=ghcr.io \
           --docker-username=4min4m \
